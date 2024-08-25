@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Jogo</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #87CEEB; /* Cor de fundo azul claro */
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+            background: #f0f0f0;
+        }
+        #pontuacao {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            color: #000;
+        }
+        #nome {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            color: #000;
+        }
+        #inputNome {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            display: none;
+        }
+        #trofeu {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: gold;
+            display: none;
+        }
+        #mensagem {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="inputNome">
+        <input type="text" id="nomePersonagem" placeholder="Digite o nome do personagem">
+        <button onclick="startGame()">Começar</button>
+    </div>
+    <div id="pontuacao">Pontuação: 0</div>
+    <div id="nome"></div>
+    <div id="trofeu">🏆</div>
+    <div id="mensagem">Parabéns!</div>
+    <canvas id="jogoCanvas"></canvas>
+    
+    <script>
+        const canvas = document.getElementById('jogoCanvas');
+        const ctx = canvas.getContext('2d');
+        const largura = window.innerWidth;
+        const altura = window.innerHeight;
+
+        canvas.width = largura;
+        canvas.height = altura;
+
+        let pontuacao = 0;
+        let pulando = false;
+        let gravidade = 0.5;
+        let velocidadeY = 0;
+        let alturaPulo = 20;
+        let alturaPersonagem = 80; // Altura da boneca
+        let larguraPersonagem = 50; // Largura da boneca
+        let personagemX = 50;
+        let personagemY = altura - alturaPersonagem;
+        let obstaculos = [];
+        let intervaloObstaculo = 2000; // Intervalo inicial para criar novos obstáculos
+        let timer = Date.now();
+        let velocidadeObstaculo = 5; // Velocidade inicial dos obstáculos
+        let velocidadePersonagem = 5; // Velocidade inicial do personagem
+        let imgPersonagem = new Image();
+        imgPersonagem.src = 'https://example.com/imagem-boneca.png'; // URL da imagem da boneca
+
+        function startGame() {
+            document.getElementById('inputNome').style.display = 'none';
+            document.getElementById('nome').innerText = document.getElementById('nomePersonagem').value;
+            imgPersonagem.onload = atualizar;
+        }
+
+        function desenharPersonagem() {
+            ctx.drawImage(imgPersonagem, personagemX, personagemY, larguraPersonagem, alturaPersonagem);
+        }
+
+        function desenharObstaculo(x, y, largura, altura) {
+            ctx.fillStyle = '#8B0000'; // Cor dos obstáculos
+            ctx.fillRect(x, y, largura, altura);
+        }
+
+        function gerarObstaculo() {
+            let larguraObstaculo = 50 + Math.random() * 50; // Largura do obstáculo entre 50 e 100
+            let alturaObstaculo = altura - 50; // Obstáculo começa na altura do fundo
+            let posX = largura;
+            obstaculos.push({ x: posX, y: alturaObstaculo, largura: larguraObstaculo, altura: 50 });
+        }
+
+        function atualizarObstaculos() {
+            obstaculos.forEach(obstaculo => {
+                obstaculo.x -= velocidadeObstaculo;
+                if (obstaculo.x + obstaculo.largura < 0) {
+                    obstaculos.shift(); // Remove obstáculos que saíram da tela
+                    pontuacao += 10; // Aumenta a pontuação
+                    velocidadeObstaculo = 5 + Math.floor(pontuacao / 100); // Aumenta a velocidade dos obstáculos conforme a pontuação
+                    velocidadePersonagem = 5 + Math.floor(pontuacao / 100); // Aumenta a velocidade do personagem conforme a pontuação
+                    if (pontuacao >= 500) {
+                        document.getElementById('trofeu').style.display = 'block';
+                        document.getElementById('mensagem').style.display = 'block';
+                    }
+                }
+            });
+        }
+
+        function verificarColisao() {
+            obstaculos.forEach(obstaculo => {
+                if (personagemX < obstaculo.x + obstaculo.largura &&
+                    personagemX + larguraPersonagem > obstaculo.x &&
+                    personagemY < obstaculo.y + obstaculo.altura &&
+                    personagemY + alturaPersonagem > obstaculo.y) {
+                    alert('Game Over! Sua pontuação final é: ' + pontuacao);
+                    document.location.reload();
+                }
+            });
+        }
+
+        function atualizar() {
+            ctx.clearRect(0, 0, largura, altura);
+
+            // Atualiza a posição do personagem
+            if (pulando) {
+                velocidadeY -= gravidade;
+                personagemY -= velocidadeY;
+                if (personagemY >= altura - alturaPersonagem) {
+                    personagemY = altura - alturaPersonagem;
+                    pulando = false;
+                    velocidadeY = 0;
+                }
+            }
+
+            desenharPersonagem();
+            obstaculos.forEach(obstaculo => {
+                desenharObstaculo(obstaculo.x, obstaculo.y, obstaculo.largura, obstaculo.altura);
+            });
+            
+            atualizarObstaculos();
+            verificarColisao();
+            document.getElementById('pontuacao').innerText = 'Pontuação: ' + pontuacao;
+
+            // Adiciona novos obstáculos em intervalos
+            if (Date.now() - timer > intervaloObstaculo) {
+                gerarObstaculo();
+                timer = Date.now();
+            }
+
+            requestAnimationFrame(atualizar);
+        }
+
+        document.addEventListener('click', () => {
+            if (!pulando && personagemY >= altura - alturaPersonagem) {
+                pulando = true;
+                velocidadeY = alturaPulo;
+            }
+        });
+    </script>
+</body>
+</html>
